@@ -1,94 +1,101 @@
 import type { Preset } from "../presets/historical";
+import { getLang, onLangChange, t } from "../i18n";
+
+type Mode =
+  | { kind: "empty" }
+  | { kind: "preset"; preset: Preset }
+  | { kind: "manual" }
+  | { kind: "random" };
 
 export class InfoPanel {
   root: HTMLElement;
+  mode: Mode = { kind: "empty" };
 
   constructor(root: HTMLElement) {
     this.root = root;
-    this.renderEmpty();
+    this.render();
+    onLangChange(() => this.render());
   }
 
   renderEmpty(): void {
-    this.root.innerHTML = `
-      <div class="info-empty">
-        <h3>À propos</h3>
-        <p>
-          Le <strong>problème à trois corps</strong> consiste à déterminer le mouvement de
-          trois masses ponctuelles soumises uniquement à leur attraction gravitationnelle mutuelle.
-        </p>
-        <p>
-          En 1889, <strong>Henri Poincaré</strong> démontre qu'il n'existe pas de solution
-          analytique générale — le système est <em>chaotique</em>. Ce résultat fonde la théorie
-          des systèmes dynamiques modernes.
-        </p>
-        <p>Choisis un cas historique pour explorer une solution remarquable.</p>
-      </div>
-    `;
+    this.mode = { kind: "empty" };
+    this.render();
   }
 
   renderPreset(p: Preset): void {
-    const periodStr = p.period
-      ? `<div class="info-stat"><span>Période</span><strong>${p.period.toFixed(4)}</strong></div>`
-      : "";
-    this.root.innerHTML = `
-      <div class="info-card">
-        <h3>${escapeHtml(p.name)}</h3>
-        <div class="info-meta">${p.year} · ${escapeHtml(p.discoverers)}</div>
-        <p class="info-summary">${escapeHtml(p.summary)}</p>
-        <div class="info-stats">
-          <div class="info-stat"><span>Année</span><strong>${p.year}</strong></div>
-          ${periodStr}
-          <div class="info-stat"><span>Famille</span><strong>${familyLabel(p.family)}</strong></div>
-        </div>
-        <h4>Contexte historique</h4>
-        <p class="info-history">${escapeHtml(p.history)}</p>
-      </div>
-    `;
+    this.mode = { kind: "preset", preset: p };
+    this.render();
   }
 
   renderManual(): void {
-    this.root.innerHTML = `
-      <div class="info-card">
-        <h3>Configuration manuelle</h3>
-        <p>
-          Choisis librement masses, positions et vitesses. Conseil : pour que le système ne dérive pas
-          hors-écran, garde la quantité de mouvement totale proche de zéro
-          (la somme des <code>m·v</code> doit être nulle).
-        </p>
-        <p>
-          La quasi-totalité des configurations sont chaotiques. Seules certaines familles très
-          particulières produisent des orbites périodiques.
-        </p>
-      </div>
-    `;
+    this.mode = { kind: "manual" };
+    this.render();
   }
 
   renderRandom(): void {
-    this.root.innerHTML = `
-      <div class="info-card">
-        <h3>Tirage aléatoire</h3>
-        <p>
-          Les positions et vitesses sont tirées uniformément dans les plages choisies.
-          Le centre de masse est ensuite ramené au repos.
-        </p>
-        <p>
-          Tu observeras presque toujours le scénario typique : deux corps forment un système
-          binaire, le troisième est éjecté à l'infini. C'est ce qu'on appelle l'<em>évolution
-          hiérarchique</em>, prédite théoriquement et confirmée par les simulations à grande échelle.
-        </p>
-      </div>
-    `;
+    this.mode = { kind: "random" };
+    this.render();
   }
-}
 
-function familyLabel(f: Preset["family"]): string {
-  switch (f) {
-    case "classical":
-      return "Classique";
-    case "suvakov":
-      return "Šuvakov 2013";
-    case "chaotic":
-      return "Chaotique";
+  private render(): void {
+    switch (this.mode.kind) {
+      case "empty":
+        this.root.innerHTML = `
+          <div class="info-empty">
+            <h3>${escapeHtml(t().defaultTitle)}</h3>
+            <p>${t().defaultIntro}</p>
+            <p>${t().defaultPoincare}</p>
+            <p>${escapeHtml(t().defaultCta)}</p>
+          </div>
+        `;
+        break;
+      case "preset": {
+        const lang = getLang();
+        const p = this.mode.preset;
+        const periodStr = p.period
+          ? `<div class="info-stat"><span>${escapeHtml(t().periodLabel)}</span><strong>${p.period.toFixed(4)}</strong></div>`
+          : "";
+        const familyName =
+          p.family === "classical"
+            ? t().familyClassical
+            : p.family === "suvakov"
+            ? t().familySuvakov
+            : t().familyChaotic;
+        this.root.innerHTML = `
+          <div class="info-card">
+            <h3>${escapeHtml(p.name[lang])}</h3>
+            <div class="info-meta">${p.year} · ${escapeHtml(p.discoverers)}</div>
+            <p class="info-summary">${escapeHtml(p.summary[lang])}</p>
+            <div class="info-stats">
+              <div class="info-stat"><span>${escapeHtml(t().yearLabel)}</span><strong>${p.year}</strong></div>
+              ${periodStr}
+              <div class="info-stat"><span>${escapeHtml(t().familyLabel)}</span><strong>${escapeHtml(familyName)}</strong></div>
+            </div>
+            <h4>${escapeHtml(t().historyHeading)}</h4>
+            <p class="info-history">${escapeHtml(p.history[lang])}</p>
+          </div>
+        `;
+        break;
+      }
+      case "manual":
+        this.root.innerHTML = `
+          <div class="info-card">
+            <h3>${escapeHtml(t().manualTitle)}</h3>
+            <p>${t().manualP1}</p>
+            <p>${t().manualP2}</p>
+          </div>
+        `;
+        break;
+      case "random":
+        this.root.innerHTML = `
+          <div class="info-card">
+            <h3>${escapeHtml(t().randomTitle)}</h3>
+            <p>${t().randomP1}</p>
+            <p>${t().randomP2}</p>
+          </div>
+        `;
+        break;
+    }
   }
 }
 

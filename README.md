@@ -68,6 +68,11 @@ No installation required — just open the URL and explore.
   discoverer, the year, the orbital period (when known), and a paragraph of
   historical background
 - **Responsive layout** that switches from side-by-side to stacked on narrow viewports
+- **Three-language interface** — English (default), French, Japanese. Click the
+  flag next to the title to switch. The selection is persisted in
+  `localStorage` and the browser language is used as a fallback hint on first
+  visit. Every preset name, summary and historical paragraph is translated to
+  all three languages.
 
 ## The physics
 

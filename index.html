@@ -1,16 +1,19 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Problème à trois corps — Simulateur</title>
+    <title>Three-Body Simulator</title>
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <h1>Problème à trois corps</h1>
-        <div class="topbar-meta">Simulateur — Newton, intégrateur Verlet</div>
+        <div class="topbar-title">
+          <h1 id="app-title"></h1>
+          <span id="lang-switcher"></span>
+        </div>
+        <div class="topbar-meta" id="app-subtitle"></div>
       </header>
 
       <main class="layout">
@@ -18,12 +21,12 @@
           <canvas id="canvas"></canvas>
           <div class="canvas-overlay" id="status"></div>
           <div class="canvas-toolbar">
-            <button id="btn-play" class="btn primary">▶︎ Lancer</button>
-            <button id="btn-reset" class="btn">↺ Réinitialiser</button>
-            <button id="btn-step" class="btn">→ Pas</button>
-            <button id="btn-clear-trails" class="btn">∅ Effacer traces</button>
+            <button id="btn-play" class="btn primary"></button>
+            <button id="btn-reset" class="btn"></button>
+            <button id="btn-step" class="btn"></button>
+            <button id="btn-clear-trails" class="btn"></button>
             <label class="speed">
-              Vitesse
+              <span id="speed-label"></span>
               <input id="speed" type="range" min="0.1" max="5" step="0.1" value="1" />
               <span id="speed-val">1.0×</span>
             </label>
@@ -32,9 +35,9 @@
 
         <aside class="sidebar">
           <div class="tabs">
-            <button class="tab active" data-tab="presets">Cas historiques</button>
-            <button class="tab" data-tab="manual">Manuel</button>
-            <button class="tab" data-tab="random">Aléatoire</button>
+            <button class="tab active" data-tab="presets" id="tab-presets"></button>
+            <button class="tab" data-tab="manual" id="tab-manual"></button>
+            <button class="tab" data-tab="random" id="tab-random"></button>
           </div>
 
           <div class="tab-panel active" data-panel="presets">
@@ -43,25 +46,22 @@
 
           <div class="tab-panel" data-panel="manual">
             <div id="manual-controls" class="manual-controls"></div>
-            <button id="btn-apply-manual" class="btn primary full">Appliquer</button>
+            <button id="btn-apply-manual" class="btn primary full"></button>
           </div>
 
           <div class="tab-panel" data-panel="random">
-            <p class="hint">
-              Génère 3 corps avec positions et vitesses aléatoires (centre de masse au repos).
-              La plupart des configurations sont chaotiques — un corps finit en général éjecté.
-            </p>
+            <p class="hint" id="random-hint"></p>
             <label class="field">
-              Plage de position
+              <span id="rnd-pos-label"></span>
               <input id="rnd-pos" type="range" min="0.5" max="3" step="0.1" value="1.5" />
               <span id="rnd-pos-val">1.5</span>
             </label>
             <label class="field">
-              Plage de vitesse
+              <span id="rnd-vel-label"></span>
               <input id="rnd-vel" type="range" min="0" max="1" step="0.05" value="0.4" />
               <span id="rnd-vel-val">0.4</span>
             </label>
-            <button id="btn-random" class="btn primary full">Générer</button>
+            <button id="btn-random" class="btn primary full"></button>
           </div>
 
           <div id="info-panel" class="info-panel"></div>

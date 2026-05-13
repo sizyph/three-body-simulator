@@ -1,4 +1,5 @@
 import type { Body } from "../physics/types";
+import { onLangChange, t } from "../i18n";
 import { BODY_COLORS, BODY_LABELS } from "./canvas";
 
 interface ManualField {
@@ -12,13 +13,21 @@ interface ManualField {
 export class ManualControls {
   fields: ManualField[] = [];
   root: HTMLElement;
+  cachedValues: Body[] | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
     this.render();
+    onLangChange(() => {
+      // Preserve current input values across re-render
+      this.cachedValues = this.readBodies();
+      this.render();
+      this.setBodies(this.cachedValues);
+    });
   }
 
   private render(): void {
+    this.fields = [];
     this.root.innerHTML = "";
     for (let i = 0; i < 3; i++) {
       const card = document.createElement("div");
@@ -27,10 +36,10 @@ export class ManualControls {
       card.innerHTML = `
         <div class="body-card-head">
           <span class="dot" style="background:${BODY_COLORS[i]}"></span>
-          Corps ${BODY_LABELS[i]}
+          ${escapeHtml(t().bodyLabel)} ${BODY_LABELS[i]}
         </div>
         <div class="grid">
-          <label>Masse <input type="number" step="0.1" value="1" data-k="mass"></label>
+          <label>${escapeHtml(t().mass)} <input type="number" step="0.1" value="1" data-k="mass"></label>
           <label>x <input type="number" step="0.01" value="0" data-k="px"></label>
           <label>y <input type="number" step="0.01" value="0" data-k="py"></label>
           <label>vx <input type="number" step="0.01" value="0" data-k="vx"></label>
@@ -76,8 +85,12 @@ function round(x: number, digits = 4): number {
   return Math.round(x * f) / f;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export function randomBodies(posRange: number, velRange: number): Body[] {
-  const r = () => (Math.random() * 2 - 1);
+  const r = () => Math.random() * 2 - 1;
   const bodies: Body[] = [];
   for (let i = 0; i < 3; i++) {
     bodies.push({
@@ -86,7 +99,6 @@ export function randomBodies(posRange: number, velRange: number): Body[] {
       velocity: { x: r() * velRange, y: r() * velRange },
     });
   }
-  // Subtract COM velocity so the system doesn't drift off-screen.
   let totM = 0;
   let vx = 0;
   let vy = 0;

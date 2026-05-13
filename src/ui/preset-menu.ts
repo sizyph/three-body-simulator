@@ -1,10 +1,5 @@
 import { PRESETS, type Preset } from "../presets/historical";
-
-const FAMILY_LABEL: Record<Preset["family"], string> = {
-  classical: "Classique",
-  suvakov: "Šuvakov-Dmitrašinović",
-  chaotic: "Chaotique",
-};
+import { getLang, onLangChange, t } from "../i18n";
 
 export class PresetMenu {
   root: HTMLElement;
@@ -15,10 +10,17 @@ export class PresetMenu {
     this.root = root;
     this.onSelect = onSelect;
     this.render();
+    onLangChange(() => this.render());
   }
 
   private render(): void {
     this.root.innerHTML = "";
+    const lang = getLang();
+    const familyLabels: Record<Preset["family"], string> = {
+      classical: t().familyClassical,
+      suvakov: t().familySuvakov,
+      chaotic: t().familyChaotic,
+    };
     const groups = new Map<Preset["family"], Preset[]>();
     for (const p of PRESETS) {
       const arr = groups.get(p.family) ?? [];
@@ -30,16 +32,17 @@ export class PresetMenu {
       if (!arr || arr.length === 0) continue;
       const group = document.createElement("div");
       group.className = "preset-group";
-      group.innerHTML = `<div class="preset-group-title">${FAMILY_LABEL[family]}</div>`;
+      group.innerHTML = `<div class="preset-group-title">${escapeHtml(familyLabels[family])}</div>`;
       this.root.appendChild(group);
 
       for (const preset of arr) {
         const btn = document.createElement("button");
         btn.className = "preset-btn";
+        if (preset.id === this.selectedId) btn.classList.add("active");
         btn.dataset.id = preset.id;
         btn.innerHTML = `
-          <span class="preset-name">${preset.name}</span>
-          <span class="preset-meta">${preset.year} · ${preset.discoverers}</span>
+          <span class="preset-name">${escapeHtml(preset.name[lang])}</span>
+          <span class="preset-meta">${preset.year} · ${escapeHtml(preset.discoverers)}</span>
         `;
         btn.addEventListener("click", () => {
           this.select(preset.id);
@@ -56,4 +59,8 @@ export class PresetMenu {
       btn.classList.toggle("active", (btn as HTMLElement).dataset.id === id);
     }
   }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

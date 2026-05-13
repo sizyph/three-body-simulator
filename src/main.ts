@@ -4,7 +4,9 @@ import { CanvasRenderer } from "./ui/canvas";
 import { ManualControls, randomBodies } from "./ui/controls";
 import { PresetMenu } from "./ui/preset-menu";
 import { InfoPanel } from "./ui/info-panel";
+import { LanguageSwitcher } from "./ui/language-switcher";
 import { PRESETS, type Preset } from "./presets/historical";
+import { getLang, onLangChange, t } from "./i18n";
 
 // ----- DOM refs -----
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -21,6 +23,19 @@ const rndVel = document.getElementById("rnd-vel") as HTMLInputElement;
 const rndVelVal = document.getElementById("rnd-vel-val") as HTMLSpanElement;
 const rndBtn = document.getElementById("btn-random") as HTMLButtonElement;
 const applyManualBtn = document.getElementById("btn-apply-manual") as HTMLButtonElement;
+const appTitle = document.getElementById("app-title") as HTMLHeadingElement;
+const appSubtitle = document.getElementById("app-subtitle") as HTMLDivElement;
+const speedLabel = document.getElementById("speed-label") as HTMLSpanElement;
+const rndPosLabel = document.getElementById("rnd-pos-label") as HTMLSpanElement;
+const rndVelLabel = document.getElementById("rnd-vel-label") as HTMLSpanElement;
+const tabPresetsBtn = document.getElementById("tab-presets") as HTMLButtonElement;
+const tabManualBtn = document.getElementById("tab-manual") as HTMLButtonElement;
+const tabRandomBtn = document.getElementById("tab-random") as HTMLButtonElement;
+const randomHint = document.getElementById("random-hint") as HTMLParagraphElement;
+const langSwitcherEl = document.getElementById("lang-switcher") as HTMLSpanElement;
+
+// ----- Set initial document lang attribute -----
+document.documentElement.lang = getLang();
 
 // ----- Init simulation with default preset (Figure-8) -----
 const defaultPreset = PRESETS[0];
@@ -37,31 +52,58 @@ const presetMenu = new PresetMenu(
   (preset) => loadPreset(preset),
 );
 
+new LanguageSwitcher(langSwitcherEl);
+
 presetMenu.select(defaultPreset.id);
 info.renderPreset(defaultPreset);
 
 // ----- State -----
 let running = false;
-let currentPresetName: string | null = defaultPreset.name;
+type StatusKind =
+  | { kind: "preset"; preset: Preset }
+  | { kind: "manual" }
+  | { kind: "random" }
+  | { kind: "none" };
+let statusKind: StatusKind = { kind: "preset", preset: defaultPreset };
+
+// ----- Apply translations to static-ish elements -----
+function applyStaticTranslations(): void {
+  document.title = t().appTitle;
+  appTitle.textContent = t().appTitle;
+  appSubtitle.textContent = t().appSubtitle;
+  resetBtn.textContent = t().reset;
+  stepBtn.textContent = t().step;
+  clearTrailsBtn.textContent = t().clearTrails;
+  speedLabel.textContent = t().speed;
+  tabPresetsBtn.textContent = t().tabPresets;
+  tabManualBtn.textContent = t().tabManual;
+  tabRandomBtn.textContent = t().tabRandom;
+  randomHint.textContent = t().randomHint;
+  rndPosLabel.textContent = t().randomPositionRange;
+  rndVelLabel.textContent = t().randomVelocityRange;
+  rndBtn.textContent = t().generate;
+  applyManualBtn.textContent = t().applyManual;
+  updatePlayButtonLabel();
+}
+
+function updatePlayButtonLabel(): void {
+  playBtn.textContent = running ? t().pause : t().play;
+}
 
 // ----- Functions -----
 function loadPreset(preset: Preset): void {
   sim.loadBodies(preset.bodies);
   renderer.fitTo(sim);
   manual.setBodies(sim.state.bodies);
-  currentPresetName = preset.name;
+  statusKind = { kind: "preset", preset };
   info.renderPreset(preset);
-  updatePlayState(false);
+  setRunning(false);
 }
 
 function setRunning(next: boolean): void {
   running = next;
-  playBtn.textContent = running ? "⏸ Pause" : "▶︎ Lancer";
+  updatePlayButtonLabel();
   playBtn.classList.toggle("primary", !running);
-}
-
-function updatePlayState(next: boolean): void {
-  setRunning(next);
 }
 
 function tick(): void {
@@ -72,14 +114,28 @@ function tick(): void {
   requestAnimationFrame(tick);
 }
 
+function statusTitleText(): string {
+  switch (statusKind.kind) {
+    case "preset":
+      return statusKind.preset.name[getLang()];
+    case "manual":
+      return t().manualConfigStatus;
+    case "random":
+      return t().randomConfigStatus;
+    case "none":
+      return "";
+  }
+}
+
 function updateStatus(): void {
   const drift = sim.energyDrift();
   const driftStr = (drift * 100).toFixed(3);
-  const title = currentPresetName ? `<strong>${escapeHtml(currentPresetName)}</strong> · ` : "";
+  const titleText = statusTitleText();
+  const titleHtml = titleText ? `<strong>${escapeHtml(titleText)}</strong> · ` : "";
   statusEl.innerHTML = `
-    ${title}
+    ${titleHtml}
     t = ${sim.state.time.toFixed(2)} ·
-    dérive E = ${driftStr}%
+    ${escapeHtml(t().driftLabel)} = ${driftStr}%
   `;
 }
 
@@ -117,8 +173,8 @@ rndBtn.addEventListener("click", () => {
   sim.loadBodies(bodies);
   manual.setBodies(sim.state.bodies);
   renderer.fitTo(sim);
-  presetMenu.select(""); // no preset highlighted
-  currentPresetName = "Tirage aléatoire";
+  presetMenu.select("");
+  statusKind = { kind: "random" };
   info.renderRandom();
   setRunning(false);
 });
@@ -128,7 +184,7 @@ applyManualBtn.addEventListener("click", () => {
   sim.loadBodies(bodies);
   renderer.fitTo(sim);
   presetMenu.select("");
-  currentPresetName = "Configuration manuelle";
+  statusKind = { kind: "manual" };
   info.renderManual();
   setRunning(false);
 });
@@ -138,7 +194,7 @@ const tabs = document.querySelectorAll<HTMLButtonElement>(".tab");
 const panels = document.querySelectorAll<HTMLDivElement>(".tab-panel");
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    tabs.forEach((t) => t.classList.toggle("active", t === tab));
+    tabs.forEach((tt) => tt.classList.toggle("active", tt === tab));
     const key = tab.dataset.tab;
     panels.forEach((p) => p.classList.toggle("active", p.dataset.panel === key));
     if (key === "manual") info.renderManual();
@@ -156,6 +212,11 @@ window.addEventListener("resize", () => {
   renderer.resize();
 });
 
+// ----- Language change handling -----
+onLangChange(() => {
+  applyStaticTranslations();
+});
+
 // ----- Helpers -----
 function escapeHtml(s: string): string {
   return s
@@ -166,6 +227,7 @@ function escapeHtml(s: string): string {
 }
 
 // ----- Go -----
+applyStaticTranslations();
 renderer.draw(sim);
 updateStatus();
 requestAnimationFrame(tick);
